@@ -6,6 +6,7 @@ package nics.crypto.ntrureencrypt;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +16,7 @@ import net.sf.ntru.encrypt.EncryptionParameters;
 import net.sf.ntru.encrypt.EncryptionPrivateKey;
 import net.sf.ntru.encrypt.EncryptionPublicKey;
 import net.sf.ntru.encrypt.NtruEncrypt;
+import net.sf.ntru.exception.NtruException;
 import net.sf.ntru.polynomial.IntegerPolynomial;
 import net.sf.ntru.polynomial.Polynomial;
 
@@ -79,35 +81,25 @@ public class NTRUReEncrypt {
         return generateReEncryptionKey(pA.getPrivate(), pB.getPrivate());
     }
 
-    public IntegerPolynomial encrypt(EncryptionPublicKey pub, IntegerPolynomial m) throws Exception {
+    public IntegerPolynomial encrypt(EncryptionPublicKey pub, IntegerPolynomial m, byte[] seed) throws Exception {
 
-        Polynomial r = generateBlindingPolynomial(generateSeed()); // oid es cualquier cosa
-        
-        out("r = " + Arrays.toString(r.toIntegerPolynomial().coeffs));
+        Polynomial r = generateBlindingPolynomial(seed);
 
         IntegerPolynomial h = extractH(pub);
         
-        out("h = " + Arrays.toString(h.coeffs));
-        
         IntegerPolynomial e = r.mult(h);
-        
-        out("e = " + Arrays.toString(e.coeffs));
         
         e.add(m);
         
-        out("e = " + Arrays.toString(e.coeffs));
-        
         e.ensurePositive(params.q);
-        
-        out("e = " + Arrays.toString(e.coeffs));
         
         return e;
 
     }
 
-    public IntegerPolynomial reEncrypt(ReEncryptionKey rk, IntegerPolynomial c) throws Exception {
+    public IntegerPolynomial reEncrypt(ReEncryptionKey rk, IntegerPolynomial c, byte[] seed) throws Exception {
 
-        Polynomial r = generateBlindingPolynomial(generateSeed()); // oid es cualquier cosa
+        Polynomial r = generateBlindingPolynomial(seed);
 
 
 
@@ -169,8 +161,104 @@ public class NTRUReEncrypt {
         for (int j = 2 * dm0; j < 3 * dm0; j++) {
             m.coeffs[list.get(j)] = 1;
         }
-        out("m = " + Arrays.toString(m.coeffs));
         return m;
+    }
+
+    /** 
+     * Encodes a binary message into the mLen less significant coefficients of a ternary polynomial of length N
+     * 
+     * @param msg   binary message encoded as int array {0,1}*
+     * @param seed  a seed to initialize the secure random to generate ternary coefficients
+     * @param dm0   the minimum number of coefficients that must be -1, 0, or 1
+     * 
+     * @return      the binary message encoded as a polynomial with ternary coefficients
+     */
+
+    // TODO: adapt the randomness generator to use a different distribution based on the number of {0,1}s in the input
+    // TODO: apply different forms of encoding, e.g., even/odd cells, less/more significant coefficients...
+
+    public IntegerPolynomial encodeMessage(int[] msg, byte[] seed, int dm0) {
+        
+        // In the worst case, the message is all 0's or 1's. The rest of N coeffs are not enough to fulfil the minimum dm0 for {-1 , 0, 1}.
+        if((params.N - msg.length) < dm0 * 2) {
+            throw new NtruException("Message too long.");
+        }
+
+        int mLen = msg.length;
+        IntegerPolynomial m = new IntegerPolynomial(params.N);
+        Random rand = new SecureRandom(seed);
+        ArrayList<Integer> list = new ArrayList<Integer>();
+
+        for(int i = 0; i < mLen; i++) {
+            m.coeffs[i] = msg[i];
+        }
+
+        boolean ok_m = true;
+        do{
+            for(int i = mLen; i < params.N; i++) {
+                m.coeffs[i] = rand.nextInt(3) - 1;
+            }
+            if (m.count(-1) < dm0)
+                ok_m = false;
+            if (m.count(0) < dm0)
+                ok_m = false;
+            if (m.count(1) < dm0)
+                ok_m = false;
+
+        } while(!ok_m);
+
+        return m;
+    }
+
+    /**
+     * Interface to encode a BigInteger decimal number inside a ternary polynomial
+     * 
+     * @param msg
+     * @param seed
+     * @param dm0
+     * @return
+     */
+    public IntegerPolynomial encodeMessage(BigInteger msg, byte[] seed, int dm0) {
+        int[] binaryMsg = Utils.bigIntegerToBitArray(msg);
+        return this.encodeMessage(binaryMsg, seed, dm0);
+    }
+
+    /** 
+     * Decodes a ternary polynomial to a binary message, performing the corresponding carries of binary addition if needed
+     * Carries can exist if the message recovered is the result of the addition of two messages using the homomorphic property of NTRU
+     * REMARK: only a single addition is supported, otherwise the result cannot be recovered
+     * 
+     * @param encM  a polynomial with ternary coefficients
+     * @param mLen  the mLen coefficients of encM with smaller degree are the encoded message
+     * 
+     * @return      the recovered message after applying the addition carries (as int[] of binary data)
+     */
+
+    public int[] decodeMessagetoBitArray(IntegerPolynomial encM, int mLen) {
+
+        int[] res = new int[mLen + 1];
+        for(int j = 0; j < mLen; j++) {
+            res[j] = (encM.coeffs[j] == -1) ? 2 : encM.coeffs[j];
+        }
+
+        int carry = 0;
+        for(int j = 0; j < res.length - 1; j++) {
+            res[j] += carry;
+            if(res[j] >= 2) {
+                res[j] -= 2;
+                carry = 1;
+            } else {
+                carry = 0;
+            }
+        }
+        res[mLen] = carry;
+
+        return res;
+    }
+
+    public BigInteger decodeMessagetoBigInteger(IntegerPolynomial encM, int mLen) {
+        int[] decoded = this.decodeMessagetoBitArray(encM, mLen);
+        return Utils.bitArrayToBigInteger(decoded);
     }
 
     public static IntegerPolynomial extractF(EncryptionPrivateKey priv) throws Exception {
@@ -188,7 +276,4 @@ public class NTRUReEncrypt {
         return f;
     }
 
-    private byte[] generateSeed() {
-        return new byte[]{1, 2, 3, 4};
-    }
 }
