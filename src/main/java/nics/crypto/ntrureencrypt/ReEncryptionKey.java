@@ -39,6 +39,12 @@ public class ReEncryptionKey {
         }
     }
 
+    public ReEncryptionKey(IntegerPolynomial rk, int q) {
+        this.N = rk.coeffs.length;
+        this.q = q;
+        this.rk = rk.clone();
+    }
+
     public ReEncryptionKey(IntegerPolynomial fA, IntegerPolynomial fB, int q) {
         
         //if(fA.coeffs.length != fB.coeffs.length) {
