@@ -24,6 +24,12 @@ public class ReEncryptionKey {
     public int q;
     public IntegerPolynomial rk;
     
+    public ReEncryptionKey(IntegerPolynomial rk, int q) {
+        this.N = rk.coeffs.length;
+        this.q = q;
+        this.rk = rk.clone();
+    }
+
     public ReEncryptionKey(byte[] b) {
         this(new ByteArrayInputStream(b));
     }
@@ -38,13 +44,7 @@ public class ReEncryptionKey {
             throw new NtruException(e);
         }
     }
-
-    public ReEncryptionKey(IntegerPolynomial rk, int q) {
-        this.N = rk.coeffs.length;
-        this.q = q;
-        this.rk = rk.clone();
-    }
-
+    
     public ReEncryptionKey(IntegerPolynomial fA, IntegerPolynomial fB, int q) {
         
         //if(fA.coeffs.length != fB.coeffs.length) {
