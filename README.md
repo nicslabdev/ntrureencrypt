@@ -16,9 +16,11 @@ prototype is a mere proof of concept so the implementation is completely monolit
 
 ## Instalation
 
-`$ git clone https://github.com/nicslabdev/ntrureencrypt.git`
-`$ cd ntrureencrypt`
-`$ mvn clean package`
+```
+$ git clone https://github.com/nicslabdev/ntrureencrypt.git
+$ cd ntrureencrypt
+$ mvn clean package
+```
 
 ## Project structure
 
@@ -28,9 +30,22 @@ prototype is a mere proof of concept so the implementation is completely monolit
 - **Utils** - Functions for data representation conversions.
 - **TestNTRUReEncrypt** - Test class.
 
+## Supported parameter sets
+
+- EES1087EP2
+- EES1087EP2_FAST
+- EES1171EP1
+- EES1171EP1_FAST
+- EES1499EP1
+- EES1499EP1_FAST
+- APR2011_439
+- APR2011_439_FAST
+- APR2011_743
+- APR2011_743_FAST
+
 ## Usage example
 
-```
+```java
 // Parameter instance
 byte[] seed = new byte[]{0,1,2};
 EncryptionParameters params = NTRUReEncryptParams.getParams("EES1087EP2_FAST");
@@ -65,19 +80,19 @@ BigInteger d = ntruReEnc.decodeMessagetoBigInteger(D, mLen);
 
 NTRU is an Additively Homomorphic Encryption (AHE) scheme by definition.
 
-Given the public key $$h$$, two randomly sampled polynomials $$s_1, s_2$$ with small coefficients, and two messages $$M_1, M_2$$ encoded as ternary polynomials, then
-$$C_1 = h \cdot s_1 + M_1 (mod\;q)$$
-$$C_2 = h \cdot s_2 + M_2 (mod\;q)$$
-$$C_3 = C_1 + C_2 = h \cdot (s_1 + s_2) + (M_1 + M_2) (mod\;q)$$
-It can be noticed by correctness that $$Dec(C_3) = (M_1 + M_2)$$ as long as $$(s_1 + s_2)$$ remains small enough.
+Given the public key $h$, two randomly sampled polynomials $s_1, s_2$ with small coefficients, and two messages $M_1, M_2$ encoded as ternary polynomials, then
+$$C_1 = h \cdot s_1 + M_1 (mod q)$$
+$$C_2 = h \cdot s_2 + M_2 (mod q)$$
+$$C_3 = C_1 + C_2 = h \cdot (s_1 + s_2) + (M_1 + M_2) (mod  q)$$
+It can be noticed by correctness that $Dec(C_3) = (M_1 + M_2)$ as long as $(s_1 + s_2)$ remains small enough.
 
 ### Addition of integers mod q
 
-It can be noticed that in the base scheme, each message is encoded as a polynomial. Therefore, $$(M_1 + M_2)$$ is the addition of two polynomials, which is not directly translated to the addition of the original integer messages $$(m_1 + m_2)$$.
+It can be noticed that in the base scheme, each message is encoded as a polynomial. Therefore, $(M_1 + M_2)$ is the addition of two polynomials, which is not directly translated to the addition of the original integer messages $(m_1 + m_2)$.
 
 To tackle this issue, we propose a special codification that allows to perform a single addition of two ciphertexts such that they can be decoded to the sum of integers. The process is as follows:
 
-- **Encoding** - Since an NTRU message is a polynomial with ternary coefficients, i.e., from the set {-1, 0, 1}, given B the binary representation of m, we let the coefficient with degree k to encode the digit B[k]. Note that they will all be 0s and 1s, so there must remain enough free coefficients in the polynomial to guarantee a minimum number dm0 of coefficients with each value in {-1, 0, 1}.
+- **Encoding** - Since an NTRU message is a polynomial with ternary coefficients, i.e., from the set ${-1, 0, 1}$, given $B$ the binary representation of $m$, we let the coefficient with degree $k$ to encode the digit $B[k]$. Note that they will all be 0s and 1s, so there must remain enough free coefficients in the polynomial to guarantee a minimum number $dm0$ of coefficients with each value in ${-1, 0, 1}$.
 - **Decoding** - Since messages are ternary polynomials, they can be added bit by bit (coefficient by coefficient) such that if there is a carry to perform, the resultant coefficient will be -1. This addition is done inside the ciphertext space. Once decrypted, all the carries are applied by the decoding algorithm from the LSB to the MSB.
 
 ## Further reading
