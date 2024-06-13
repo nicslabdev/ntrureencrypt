@@ -95,7 +95,16 @@ To tackle this issue, we propose a special codification that allows to perform a
 - **Encoding** - Since an NTRU message is a polynomial with ternary coefficients, i.e., from the set ${-1, 0, 1}$, given $B$ the binary representation of $m$, we let the coefficient with degree $k$ to encode the digit $B[k]$. Note that they will all be 0s and 1s, so there must remain enough free coefficients in the polynomial to guarantee a minimum number $dm0$ of coefficients with each value in ${-1, 0, 1}$.
 - **Decoding** - Since messages are ternary polynomials, they can be added bit by bit (coefficient by coefficient) such that if there is a carry to perform, the resultant coefficient will be -1. This addition is done inside the ciphertext space. Once decrypted, all the carries are applied by the decoding algorithm from the LSB to the MSB.
 
+## Interactive protocol to derive re-encryption key
+
+**NTRUReEncrypt** needs both Alice's and Bob's private keys in order to compute the re-encryption key from Alice to Bob. To avoid a single party from learning both private keys, we have added in **NTRUReEncrypt** some methods to perform an interactive protocol from [2] to derive the re-encryption key. The protocol is as follows:
+
+- Alice samples a blinding factor $r$, sends $r \cdot SK_A$ to Bob, and $r$ to the proxy (methods *sampleBlinding* and *blindPrivateKey*).
+- Bob computes $r \cdot SK_A \cdot SK_B^{-1}$ and sends it to the proxy (method *blindInversePrivateKey*).
+- The proxy computes $r \cdot SK_A \cdot SK_B^{-1} \cdot r^{-1}$ and obtains $rk = SK_A \cdot SK_B^{-1}$ (method *extractBlinding*).
+
 ## Further reading
 [1] Nuñez, D., Agudo, I., & Lopez, J. (2015). NTRUReEncrypt: An efficient proxy re-encryption scheme based on NTRU. In Proceedings of the 10th ACM 
 Symposium on Information, Computer and Communications Security (pp. 179-189). ACM. 
 ([link](https://www.nics.uma.es/wp-content/papers/nunez2015ntrureencrypt.pdf))
+[2] Canetti, R., & Hohenberger, S. (2007). Chosen-ciphertext secure proxy re-encryption. In Proceedings of the 14th ACM conference on Computer and communications security (pp. 185-194). ACM, 2007.
