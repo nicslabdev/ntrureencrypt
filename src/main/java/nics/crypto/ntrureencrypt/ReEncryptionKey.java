@@ -24,10 +24,10 @@ public class ReEncryptionKey {
     public int q;
     public IntegerPolynomial rk;
     
-    public ReEncryptionKey(IntegerPolynomial rk, int q) {
-        this.N = rk.coeffs.length;
+    public ReEncryptionKey(int[] coeffs, int q) {
+        this.N = coeffs.length;
         this.q = q;
-        this.rk = rk.clone();
+        this.rk = new IntegerPolynomial(coeffs);
     }
 
     public ReEncryptionKey(byte[] b) {

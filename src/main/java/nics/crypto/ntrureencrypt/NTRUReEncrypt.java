@@ -276,4 +276,31 @@ public class NTRUReEncrypt {
         return f;
     }
 
+    public IntegerPolynomial sampleBlinding(Random rng) {
+        IntegerPolynomial r = new IntegerPolynomial(params.N);
+        IntegerPolynomial rInv;
+        do{
+            // Sample random r
+            
+            for(int i = 0; i < params.N; i++) {
+                r.coeffs[i] = rng.nextInt(params.q);
+            }
+            // Compute inverse
+            rInv = r.clone().invertFq(params.q);
+        }while(rInv == null);
+        return r;
+    }
+
+    public IntegerPolynomial blindPrivateKey(IntegerPolynomial r, EncryptionPrivateKey privateKey) throws Exception {
+        return r.clone().mult(privatePolynomial(privateKey), params.q);
+    }
+
+    public IntegerPolynomial blindInversePrivateKey(IntegerPolynomial rA, EncryptionPrivateKey privateKey) throws Exception {
+        return rA.clone().mult(privatePolynomial(privateKey).invertFq(params.q), params.q);
+    }
+
+    public IntegerPolynomial extractBlinding(IntegerPolynomial r, IntegerPolynomial key) {
+        return key.clone().mult(r.clone().invertFq(params.q), params.q);
+    }
+
 }
